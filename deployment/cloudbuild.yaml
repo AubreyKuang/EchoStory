@@ -1,0 +1,88 @@
+# Google Cloud Build configuration
+
+steps:
+  # Build backend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/echostory-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/echostory-backend:latest'
+      - './backend'
+    id: 'build-backend'
+
+  # Build frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/echostory-frontend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/echostory-frontend:latest'
+      - './frontend'
+    id: 'build-frontend'
+
+  # Push backend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/echostory-backend:$COMMIT_SHA'
+    id: 'push-backend'
+
+  # Push frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/echostory-frontend:$COMMIT_SHA'
+    id: 'push-frontend'
+
+  # Deploy backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'echostory-backend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/echostory-backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,STORAGE_BUCKET_NAME=${_STORAGE_BUCKET},FIRESTORE_COLLECTION=story_sessions'
+      - '--set-secrets'
+      - 'GEMINI_API_KEY=gemini-api-key:latest'
+    id: 'deploy-backend'
+
+  # Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'echostory-frontend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/echostory-frontend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'NEXT_PUBLIC_WS_URL=wss://echostory-backend-[hash]-uc.a.run.app/ws/story,NEXT_PUBLIC_API_URL=https://echostory-backend-[hash]-uc.a.run.app/api'
+    id: 'deploy-frontend'
+
+images:
+  - 'gcr.io/$PROJECT_ID/echostory-backend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/echostory-backend:latest'
+  - 'gcr.io/$PROJECT_ID/echostory-frontend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/echostory-frontend:latest'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1800s'
