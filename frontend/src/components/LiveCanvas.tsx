@@ -40,42 +40,30 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
   return (
     <div className={`relative w-full h-full min-h-screen bg-gradient-to-br ${backgroundGradient} transition-all duration-1000 overflow-hidden`}>
       {/* Main Story Display */}
-      <div className="container mx-auto px-8 py-12 flex flex-col items-center justify-center min-h-screen">
+      <div className="container mx-auto px-4 pt-20 pb-24 flex flex-col items-center justify-start min-h-screen">
         <AnimatePresence mode="wait">
           {latestSegment && (
             <motion.div
               key={latestSegment.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.5 }}
-              className="w-full max-w-4xl"
+              className="w-full max-w-6xl flex flex-col items-center"
             >
-              {/* Story Text - 快速显示，和语音同步 */}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-xl mb-6"
-              >
-                <p className="text-2xl font-medium text-gray-800 leading-relaxed text-center">
-                  {latestSegment.text}
-                </p>
-              </motion.div>
-
-              {/* Illustration - 稍后淡入 */}
+              {/* Illustration - 大图展示 */}
               <AnimatePresence>
                 {latestSegment.illustration_url && (
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
-                    className="rounded-3xl overflow-hidden shadow-2xl bg-white"
+                    className="w-4/5 mb-6 rounded-3xl overflow-hidden shadow-2xl bg-white"
                   >
                     <img
                       src={latestSegment.illustration_url}
                       alt="Story illustration"
-                      className="w-full h-auto max-h-96 object-contain"
+                      className="w-full h-auto max-h-[50vh] object-cover"
                       onError={(e) => {
                         console.error('Image failed to load:', latestSegment.illustration_url);
                         e.currentTarget.style.display = 'none';
@@ -84,11 +72,23 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Story Text - 图片下方，更紧凑 */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="w-full max-w-4xl bg-white bg-opacity-95 rounded-2xl px-8 py-5 shadow-xl"
+              >
+                <p className="text-xl font-medium text-gray-800 leading-relaxed text-center">
+                  {latestSegment.text}
+                </p>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Current AI Speech - 使用和segment相同的样式 */}
+        {/* Current AI Speech - 临时显示 */}
         {currentText && !latestSegment && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -96,9 +96,9 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
             className="w-full max-w-4xl px-8"
           >
             <motion.div
-              className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-xl"
+              className="bg-white bg-opacity-95 rounded-2xl px-8 py-5 shadow-xl"
             >
-              <p className="text-2xl font-medium text-gray-800 leading-relaxed text-center">
+              <p className="text-xl font-medium text-gray-800 leading-relaxed text-center">
                 {currentText}
               </p>
             </motion.div>

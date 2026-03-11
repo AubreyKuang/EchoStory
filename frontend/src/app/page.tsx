@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { LiveCanvas } from '@/components/LiveCanvas';
 import { ControlPanel } from '@/components/ControlPanel';
 import { CameraOverlay } from '@/components/CameraOverlay';
+import { Logo } from '@/components/Logo';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useVideoCapture } from '@/hooks/useVideoCapture';
@@ -177,6 +178,9 @@ export default function Home() {
 
   return (
     <main className="relative w-full min-h-screen">
+      {/* Logo */}
+      <Logo />
+
       {/* Main Story Canvas */}
       <LiveCanvas
         segments={segments}
@@ -206,9 +210,9 @@ export default function Home() {
         isAISpeaking={isAISpeaking}
       />
 
-      {/* Session Info (Debug) */}
-      {process.env.NODE_ENV === 'development' && sessionId && (
-        <div className="fixed top-4 left-4 bg-black bg-opacity-75 text-white text-xs px-3 py-2 rounded">
+      {/* Session Info - 右上角 */}
+      {sessionId && (
+        <div className="fixed top-4 right-4 bg-white bg-opacity-90 text-gray-600 text-xs px-3 py-1 rounded-full shadow-lg">
           Session: {sessionId.substring(0, 8)}
         </div>
       )}
