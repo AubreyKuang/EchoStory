@@ -309,4 +309,3 @@ async def generate_speech(text: str):
 - 如果添加TTS：90-95分
 - 如果添加Veo：95+分
 
-**结论：项目质量很高，值得提交！** 🚀

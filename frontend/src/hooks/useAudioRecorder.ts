@@ -4,12 +4,16 @@ import { useState, useRef, useCallback } from 'react';
 
 export const useAudioRecorder = (onAudioChunk: (data: string, isFinal: boolean) => void) => {
   const [isRecording, setIsRecording] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   const startRecording = useCallback(async () => {
     try {
+      setError(null);
+      console.log('🎤 Requesting microphone permission...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('✅ Microphone permission granted');
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm',
       });
@@ -49,8 +53,15 @@ export const useAudioRecorder = (onAudioChunk: (data: string, isFinal: boolean) 
 
       mediaRecorder.start(500); // Collect data every 500ms
       setIsRecording(true);
-    } catch (error) {
-      console.error('Error starting recording:', error);
+    } catch (error: any) {
+      console.error('❌ Error starting recording:', error);
+      const errorMsg = error.name === 'NotAllowedError'
+        ? 'Microphone permission denied. Please allow microphone access in your browser settings.'
+        : error.name === 'NotFoundError'
+        ? 'No microphone found. Please connect a microphone.'
+        : `Error: ${error.message}`;
+      setError(errorMsg);
+      alert(errorMsg);
     }
   }, [onAudioChunk]);
 
@@ -65,5 +76,6 @@ export const useAudioRecorder = (onAudioChunk: (data: string, isFinal: boolean) 
     isRecording,
     startRecording,
     stopRecording,
+    error,
   };
 };

@@ -4,13 +4,17 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 export const useVideoCapture = (onFrameCapture: (data: string) => void, captureInterval: number = 3000) => {
   const [isCapturing, setIsCapturing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startCapture = useCallback(async () => {
     try {
+      setError(null);
+      console.log('📹 Requesting camera permission...');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log('✅ Camera permission granted');
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -23,8 +27,15 @@ export const useVideoCapture = (onFrameCapture: (data: string) => void, captureI
       }, captureInterval);
 
       setIsCapturing(true);
-    } catch (error) {
-      console.error('Error starting video capture:', error);
+    } catch (error: any) {
+      console.error('❌ Error starting video capture:', error);
+      const errorMsg = error.name === 'NotAllowedError'
+        ? 'Camera permission denied. Please allow camera access in your browser settings.'
+        : error.name === 'NotFoundError'
+        ? 'No camera found. Please connect a camera.'
+        : `Error: ${error.message}`;
+      setError(errorMsg);
+      alert(errorMsg);
     }
   }, [captureInterval]);
 
@@ -76,5 +87,6 @@ export const useVideoCapture = (onFrameCapture: (data: string) => void, captureI
     stopCapture,
     videoRef,
     canvasRef,
+    error,
   };
 };
