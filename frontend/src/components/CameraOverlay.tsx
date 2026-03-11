@@ -29,13 +29,14 @@ export const CameraOverlay: React.FC<CameraOverlayProps> = ({
         >
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
             {/* Video Feed */}
-            <div className="relative w-64 h-48">
+            <div className="relative w-64 h-48 bg-gray-900">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
                 className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
               />
 
               {/* Detected Objects Overlay */}

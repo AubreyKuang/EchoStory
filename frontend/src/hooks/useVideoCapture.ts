@@ -8,6 +8,7 @@ export const useVideoCapture = (onFrameCapture: (data: string) => void, captureI
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const startCapture = useCallback(async () => {
     try {
@@ -16,16 +17,10 @@ export const useVideoCapture = (onFrameCapture: (data: string) => void, captureI
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       console.log('✅ Camera permission granted');
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      // 保存stream到ref
+      streamRef.current = stream;
 
-      // Start capturing frames at intervals
-      intervalRef.current = setInterval(() => {
-        captureFrame();
-      }, captureInterval);
-
+      // 设置状态为true，触发video元素渲染
       setIsCapturing(true);
     } catch (error: any) {
       console.error('❌ Error starting video capture:', error);
@@ -66,20 +61,51 @@ export const useVideoCapture = (onFrameCapture: (data: string) => void, captureI
       intervalRef.current = null;
     }
 
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
 
     setIsCapturing(false);
   }, []);
 
+  // 当isCapturing变为true且有stream时，连接video元素
+  useEffect(() => {
+    if (isCapturing && streamRef.current && videoRef.current) {
+      console.log('✅ Video element found, setting stream...');
+      videoRef.current.srcObject = streamRef.current;
+
+      videoRef.current.onloadedmetadata = () => {
+        console.log('✅ Video metadata loaded');
+        videoRef.current?.play().then(() => {
+          console.log('✅ Video playing');
+        }).catch(err => {
+          console.error('❌ Error playing video:', err);
+        });
+      };
+
+      // Start capturing frames at intervals
+      intervalRef.current = setInterval(() => {
+        captureFrame();
+      }, captureInterval);
+    }
+  }, [isCapturing, captureFrame, captureInterval]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopCapture();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [stopCapture]);
+  }, []);
 
   return {
     isCapturing,

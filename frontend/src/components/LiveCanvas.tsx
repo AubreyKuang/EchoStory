@@ -87,7 +87,7 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-24 left-0 right-0 mx-auto max-w-3xl px-8"
+            className="fixed bottom-40 left-0 right-0 mx-auto max-w-3xl px-8"
           >
             <div className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-lg">
               <p className="text-xl text-gray-700 text-center">
