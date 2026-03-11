@@ -87,7 +87,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             onClick={isCapturing ? onStopCapture : onStartCapture}
             disabled={!isConnected}
             className={`
-              w-20 h-20 rounded-full shadow-lg transition-all
+              relative w-20 h-20 rounded-full shadow-lg transition-all
               ${isCapturing
                 ? 'bg-soft-green'
                 : 'bg-calm-blue hover:bg-blue-300'
@@ -95,7 +95,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
           >
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex items-center justify-center w-full h-full">
               <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
               </svg>

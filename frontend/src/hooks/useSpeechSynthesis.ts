@@ -75,7 +75,10 @@ export const useSpeechSynthesis = (options: UseSpeechSynthesisOptions = {}) => {
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
+      // 忽略 "canceled" 错误（这是正常的打断行为）
+      if (event.error !== 'canceled') {
+        console.error('Speech synthesis error:', event);
+      }
       setIsSpeaking(false);
       utteranceRef.current = null;
     };
