@@ -5,6 +5,9 @@ import asyncio
 import random
 import base64
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DemoGeminiService:
@@ -16,7 +19,15 @@ class DemoGeminiService:
 
     async def process_audio_stream(self, audio_data: str, session_id: str, is_final: bool = False):
         """模拟音频处理"""
-        await asyncio.sleep(0.3)  # 模拟网络延迟
+        # 只在is_final=true时才响应（避免频繁闪烁）
+        if not is_final:
+            return {
+                "text": "",
+                "function_calls": [],
+                "is_complete": False
+            }
+
+        await asyncio.sleep(0.5)  # 模拟处理时间
 
         responses = [
             "That sounds wonderful! Tell me more about it.",
@@ -28,23 +39,19 @@ class DemoGeminiService:
 
         text = random.choice(responses)
 
-        # 随机决定是否触发图片生成
-        should_generate_image = random.random() > 0.6
-
-        function_calls = []
-        if should_generate_image:
-            function_calls.append({
-                "name": "generate_illustration",
-                "args": {
-                    "description": "A friendly colorful scene with a child playing in a park",
-                    "scene_type": "location"
-                }
-            })
+        # 每次都生成图片（方便测试）
+        function_calls = [{
+            "name": "generate_illustration",
+            "args": {
+                "description": "A friendly colorful scene with a child playing in a park",
+                "scene_type": "location"
+            }
+        }]
 
         return {
             "text": text,
             "function_calls": function_calls,
-            "is_complete": is_final
+            "is_complete": True
         }
 
     async def analyze_video_frame(self, frame_data: str, session_id: str):
@@ -88,16 +95,11 @@ class DemoGeminiService:
 
     async def generate_illustration(self, description: str, session_id: str):
         """返回占位图片URL"""
-        # 使用placeholder图片服务
-        width = 800
-        height = 600
+        await asyncio.sleep(0.5)  # 模拟生成时间
 
-        # 生成不同颜色的占位图
-        colors = ["FFB6C1", "87CEEB", "98FB98", "FFD700", "DDA0DD"]
-        color = random.choice(colors)
+        # 80%概率返回test.png，20%返回占位图
+        use_test_image = random.random() > 0.2
 
-        # 使用via.placeholder.com或其他占位图服务
-        image_url = f"https://via.placeholder.com/{width}x{height}/{color}/FFFFFF?text=Story+Scene"
-
-        # 转换为base64格式
-        return base64.b64encode(image_url.encode()).decode()
+        # 总是返回test.png（避免placeholder加载问题）
+        logger.info("📸 Using test.png")
+        return "http://localhost:3000/test.png"

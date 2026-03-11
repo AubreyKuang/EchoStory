@@ -91,6 +91,9 @@ class WebSocketManager:
         try:
             audio_data = message.get("data")  # Base64 encoded audio
             is_final = message.get("is_final", False)
+            storage_service = kwargs.get("storage_service")
+
+            logger.info(f"🎤 Processing audio chunk (final={is_final})")
 
             # Process audio with Gemini Live API
             response = await gemini_service.process_audio_stream(
@@ -99,23 +102,70 @@ class WebSocketManager:
                 is_final=is_final
             )
 
-            # Send response back to client
-            await websocket.send_json({
-                "type": "audio_response",
-                "data": response
-            })
+            # 只在有实际内容时发送响应
+            has_text = response.get("text") and response.get("text").strip()
+            has_calls = response.get("function_calls") and len(response.get("function_calls", [])) > 0
+
+            if has_text or has_calls:
+                logger.info(f"📤 Sending audio response: text={bool(has_text)}, calls={bool(has_calls)}")
+                # Send response back to client
+                await websocket.send_json({
+                    "type": "audio_response",
+                    "data": response
+                })
+
+                # Process function calls (e.g., generate illustrations)
+                if has_calls:
+                    for fc in response["function_calls"]:
+                        if fc["name"] == "generate_illustration":
+                            logger.info(f"🎨 Generating illustration...")
+
+                            try:
+                                # Generate illustration
+                                image_url = await gemini_service.generate_illustration(
+                                    description=fc["args"].get("description", "A story scene"),
+                                    session_id=session_id
+                                )
+
+                                logger.info(f"📸 Generated image URL: {image_url}")
+
+                                # Upload to storage (in demo mode this is a no-op)
+                                if storage_service:
+                                    stored_url = await storage_service.upload_image(
+                                        image_url=image_url,
+                                        session_id=session_id
+                                    )
+                                else:
+                                    stored_url = image_url
+
+                                # Send image to client
+                                await websocket.send_json({
+                                    "type": "illustration_generated",
+                                    "url": stored_url,
+                                    "description": fc["args"].get("description", "")
+                                })
+
+                                logger.info(f"✅ Illustration sent: {stored_url}")
+                            except Exception as img_error:
+                                logger.error(f"❌ Error generating illustration: {str(img_error)}", exc_info=True)
+            else:
+                logger.debug(f"⏭️ Skipping empty response")
 
         except Exception as e:
-            logger.error(f"Error handling audio chunk: {str(e)}")
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Audio processing error: {str(e)}"
-            })
+            logger.error(f"❌ Error handling audio chunk: {str(e)}", exc_info=True)
+            try:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Audio processing error: {str(e)}"
+                })
+            except:
+                pass
 
     async def _handle_video_frame(self, websocket, message, session_id, gemini_service, **kwargs):
         """Handle incoming video frames for Live Vision"""
         try:
             frame_data = message.get("data")  # Base64 encoded image
+            logger.debug(f"📹 Processing video frame")
 
             # Analyze frame with Gemini Vision
             analysis = await gemini_service.analyze_video_frame(
@@ -124,14 +174,15 @@ class WebSocketManager:
             )
 
             # If object detected, proactively mention it
-            if analysis.get("objects_detected"):
+            if analysis.get("objects_detected") and len(analysis.get("objects_detected", [])) > 0:
+                logger.info(f"👀 Objects detected: {analysis['objects_detected']}")
                 await websocket.send_json({
                     "type": "vision_detection",
                     "data": analysis
                 })
 
         except Exception as e:
-            logger.error(f"Error handling video frame: {str(e)}")
+            logger.error(f"❌ Error handling video frame: {str(e)}", exc_info=True)
 
     async def _handle_text_input(self, websocket, message, session_id, gemini_service, **kwargs):
         """Handle text input from user"""

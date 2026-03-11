@@ -24,14 +24,7 @@ export const useAudioRecorder = (onAudioChunk: (data: string, isFinal: boolean) 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
-
-          // Convert to base64 and send
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(',')[1];
-            onAudioChunk(base64, false);
-          };
-          reader.readAsDataURL(event.data);
+          // 不再每个chunk都发送，只在最后发送
         }
       };
 

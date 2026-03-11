@@ -25,7 +25,7 @@ export const CameraOverlay: React.FC<CameraOverlayProps> = ({
           initial={{ opacity: 0, x: 100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 100 }}
-          className="fixed top-8 left-8 z-50"
+          className="fixed bottom-32 right-8 z-50"
         >
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
             {/* Video Feed */}

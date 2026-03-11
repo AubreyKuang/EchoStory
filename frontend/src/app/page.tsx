@@ -48,8 +48,9 @@ export default function Home() {
     cancel: cancelSpeech,
     isSpeaking: isAISpeaking,
   } = useSpeechSynthesis({
-    rate: 0.9,
-    pitch: 1.1,
+    rate: 0.95, // 稍微加快，更接近正常语速
+    pitch: 1.05, // 稍微降低音调，更自然
+    volume: 0.9,
   });
 
   // Handle WebSocket messages
@@ -57,16 +58,42 @@ export default function Home() {
     // Handle audio/text responses
     on('audio_response', (message: WSMessage) => {
       const data = message.data;
-      if (data?.text) {
-        setCurrentText(data.text);
-        // Speak the AI response
-        speak(data.text);
-        setIsGenerating(false);
-      }
+      console.log('📥 Audio response:', data);
 
-      // Handle function calls (illustrations)
-      if (data?.function_calls && data.function_calls.length > 0) {
-        setIsGenerating(true);
+      if (data?.text && data.text.trim()) {
+        // Handle function calls (illustrations)
+        if (data?.function_calls && data.function_calls.length > 0) {
+          console.log('🎨 Function calls detected, creating segment with pending image...');
+          setIsGenerating(true);
+
+          // 立即创建segment（文字先显示，图片pending）
+          const pendingSegment: StorySegment = {
+            id: Date.now().toString(),
+            text: data.text,
+            emotion: emotion,
+            timestamp: new Date().toISOString(),
+            // illustration_url will be added later
+          };
+          setSegments((prev) => [...prev, pendingSegment]);
+          setCurrentText(''); // 清空临时文字
+
+          // 开始播放语音（和文字显示同步）
+          setTimeout(() => speak(data.text), 200); // 与文字动画同步
+        } else {
+          // 没有图片生成，创建纯文字segment
+          const textSegment: StorySegment = {
+            id: Date.now().toString(),
+            text: data.text,
+            emotion: emotion,
+            timestamp: new Date().toISOString(),
+          };
+          setSegments((prev) => [...prev, textSegment]);
+          setCurrentText('');
+          setIsGenerating(false);
+
+          // 开始播放语音
+          setTimeout(() => speak(data.text), 200);
+        }
       }
     });
 
@@ -89,18 +116,40 @@ export default function Home() {
 
     // Handle illustration generation
     on('illustration_generated', (message: WSMessage) => {
+      console.log('🎨 Received illustration:', message);
       if (message.url) {
-        const newSegment: StorySegment = {
-          id: Date.now().toString(),
-          text: currentText || message.description || '',
-          illustration_url: message.url,
-          emotion: emotion,
-          timestamp: new Date().toISOString(),
-        };
+        // 更新最新的segment，添加图片URL
+        setSegments((prev) => {
+          if (prev.length === 0) return prev;
 
-        setSegments((prev) => [...prev, newSegment]);
-        setCurrentText('');
+          const updated = [...prev];
+          const lastSegment = updated[updated.length - 1];
+
+          // 如果最后一个segment还没有图片，添加图片
+          if (!lastSegment.illustration_url) {
+            updated[updated.length - 1] = {
+              ...lastSegment,
+              illustration_url: message.url,
+            };
+            console.log('✅ Updated segment with image');
+          } else {
+            // 如果已经有图片了，创建新的segment
+            console.log('⚠️ Last segment already has image, creating new one');
+            updated.push({
+              id: Date.now().toString(),
+              text: message.description || 'A beautiful story scene',
+              illustration_url: message.url,
+              emotion: emotion,
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          return updated;
+        });
+
         setIsGenerating(false);
+      } else {
+        console.error('❌ No URL in illustration message');
       }
     });
 

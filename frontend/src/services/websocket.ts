@@ -13,12 +13,19 @@ export class WebSocketService {
   constructor(private url: string) {}
 
   connect(): Promise<void> {
+    // 避免重复连接
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      console.log('WebSocket already connecting or connected');
+      return Promise.resolve();
+    }
+
     return new Promise((resolve, reject) => {
       try {
+        console.log('🔌 Connecting to:', this.url);
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log('✅ WebSocket connected successfully');
           this.reconnectAttempts = 0;
           resolve();
         };
@@ -28,15 +35,16 @@ export class WebSocketService {
         };
 
         this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+          console.error('❌ WebSocket error:', error);
           reject(error);
         };
 
-        this.ws.onclose = () => {
-          console.log('WebSocket disconnected');
+        this.ws.onclose = (event) => {
+          console.log('🔌 WebSocket disconnected:', event.code, event.reason);
           this.attemptReconnect();
         };
       } catch (error) {
+        console.error('❌ Failed to create WebSocket:', error);
         reject(error);
       }
     });
@@ -140,7 +148,13 @@ export class WebSocketService {
 
   disconnect() {
     if (this.ws) {
-      this.ws.close();
+      // 清理所有handler
+      this.messageHandlers.clear();
+
+      // 关闭连接
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close();
+      }
       this.ws = null;
     }
   }

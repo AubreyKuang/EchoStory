@@ -1,6 +1,6 @@
 // React hook for WebSocket connection
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { getWebSocketService } from '@/services/websocket';
 import { WSMessage } from '@/types';
 
@@ -9,8 +9,17 @@ export const useWebSocket = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
   const ws = getWebSocketService();
+  const connectingRef = useRef(false);
 
   useEffect(() => {
+    // 防止重复连接
+    if (connectingRef.current) {
+      console.log('⏭️ Already connecting, skipping...');
+      return;
+    }
+
+    connectingRef.current = true;
+
     const connect = async () => {
       try {
         await ws.connect();
@@ -28,14 +37,17 @@ export const useWebSocket = () => {
       } catch (error) {
         console.error('Failed to connect:', error);
         setIsConnected(false);
+        connectingRef.current = false;
       }
     };
 
     connect();
 
     return () => {
+      console.log('🔌 Cleaning up WebSocket...');
       ws.disconnect();
       setIsConnected(false);
+      connectingRef.current = false;
     };
   }, []);
 

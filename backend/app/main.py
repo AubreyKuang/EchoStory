@@ -39,7 +39,9 @@ else:
     # Demo模式使用模拟服务
     class DemoStorageService:
         async def upload_image(self, image_url, session_id, content_type="image/png"):
-            return f"https://via.placeholder.com/800x600/87CEEB/FFFFFF?text=Demo+Image"
+            # 直接返回传入的URL（test.png）
+            logger.info(f"📦 Demo storage: returning {image_url}")
+            return image_url
 
     class DemoFirestoreService:
         async def save_session(self, session_id, session_data=None):

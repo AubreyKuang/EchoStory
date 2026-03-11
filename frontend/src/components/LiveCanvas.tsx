@@ -48,52 +48,60 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.5 }}
               className="w-full max-w-4xl"
             >
-              {/* Illustration */}
-              {latestSegment.illustration_url && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  className="mb-8 rounded-3xl overflow-hidden shadow-2xl"
-                >
-                  <img
-                    src={latestSegment.illustration_url}
-                    alt="Story illustration"
-                    className="w-full h-auto"
-                  />
-                </motion.div>
-              )}
-
-              {/* Story Text */}
+              {/* Story Text - 快速显示，和语音同步 */}
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="bg-white bg-opacity-90 rounded-2xl p-8 shadow-xl"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-xl mb-6"
               >
-                <p className="text-3xl font-medium text-gray-800 leading-relaxed text-center">
+                <p className="text-2xl font-medium text-gray-800 leading-relaxed text-center">
                   {latestSegment.text}
                 </p>
               </motion.div>
+
+              {/* Illustration - 稍后淡入 */}
+              <AnimatePresence>
+                {latestSegment.illustration_url && (
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="rounded-3xl overflow-hidden shadow-2xl bg-white"
+                  >
+                    <img
+                      src={latestSegment.illustration_url}
+                      alt="Story illustration"
+                      className="w-full h-auto max-h-96 object-contain"
+                      onError={(e) => {
+                        console.error('Image failed to load:', latestSegment.illustration_url);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Current AI Speech */}
-        {currentText && (
+        {/* Current AI Speech - 使用和segment相同的样式 */}
+        {currentText && !latestSegment && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="fixed bottom-40 left-0 right-0 mx-auto max-w-3xl px-8"
+            className="w-full max-w-4xl px-8"
           >
-            <div className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-lg">
-              <p className="text-xl text-gray-700 text-center">
+            <motion.div
+              className="bg-white bg-opacity-95 rounded-2xl p-6 shadow-xl"
+            >
+              <p className="text-2xl font-medium text-gray-800 leading-relaxed text-center">
                 {currentText}
               </p>
-            </div>
+            </motion.div>
           </motion.div>
         )}
 
