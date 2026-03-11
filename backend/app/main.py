@@ -7,23 +7,52 @@ from fastapi.responses import JSONResponse
 import logging
 from contextlib import asynccontextmanager
 
-from app.config import get_settings
-from app.websocket_handler import WebSocketManager
-from app.services.gemini_service import GeminiService
-from app.services.storage_service import StorageService
-from app.services.firestore_service import FirestoreService
-
-# Configure logging
+# Configure logging FIRST
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+from app.config import get_settings
+from app.websocket_handler import WebSocketManager
+
+# 获取配置
 settings = get_settings()
+
+# 根据配置选择真实或Demo服务
+if settings.DEMO_MODE:
+    logger.info("🎭 Running in DEMO MODE - using simulated responses")
+    from app.services.demo_service import DemoGeminiService as GeminiService
+else:
+    logger.info("Running with real Gemini API")
+    from app.services.gemini_service import GeminiService
+    from app.services.storage_service import StorageService
+    from app.services.firestore_service import FirestoreService
 
 # Initialize services
 websocket_manager = WebSocketManager()
 gemini_service = GeminiService()
-storage_service = StorageService()
-firestore_service = FirestoreService()
+
+# Storage和Firestore在demo模式下可选
+if not settings.DEMO_MODE:
+    storage_service = StorageService()
+    firestore_service = FirestoreService()
+else:
+    # Demo模式使用模拟服务
+    class DemoStorageService:
+        async def upload_image(self, image_url, session_id, content_type="image/png"):
+            return f"https://via.placeholder.com/800x600/87CEEB/FFFFFF?text=Demo+Image"
+
+    class DemoFirestoreService:
+        async def save_session(self, session_id, session_data=None):
+            return {"session_id": session_id, "status": "saved"}
+        async def get_session(self, session_id):
+            return {"session_id": session_id, "story_segments": []}
+        async def save_segment(self, session_id, segment):
+            pass
+        async def list_sessions(self, limit=10, offset=0):
+            return []
+
+    storage_service = DemoStorageService()
+    firestore_service = DemoFirestoreService()
 
 
 @asynccontextmanager

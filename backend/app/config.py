@@ -10,13 +10,14 @@ class Settings(BaseSettings):
     APP_NAME: str = "EchoStory"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    DEMO_MODE: bool = False  # Demo模式开关
 
     # Google Cloud settings
-    GOOGLE_CLOUD_PROJECT: str
+    GOOGLE_CLOUD_PROJECT: str = "demo-project"
     GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
     # Gemini API settings
-    GEMINI_API_KEY: str
+    GEMINI_API_KEY: str = "demo-key"
     GEMINI_MODEL: str = "gemini-2.0-flash-exp"
 
     # Vertex AI settings
