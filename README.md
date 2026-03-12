@@ -472,17 +472,6 @@ Running with real Gemini API
 
 ## 🌍 Region Availability
 
-### Gemini API Regions
-Gemini API is currently available in:
-- United States
-- European Union countries
-- United Kingdom
-- Canada
-- Australia
-- Japan
-- South Korea
-- Singapore
-
 **If Gemini API is NOT available in your region:**
 - ✅ Use **Demo Mode** for full functionality testing
 - ✅ Demo Mode works identically to production for presentations

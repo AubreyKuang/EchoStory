@@ -37,7 +37,7 @@ class DemoGeminiService:
         # Vision detection objects - rotate slowly
         self.vision_objects = [
             {"objects": ["pen"], "description": "I can see a pen!"},
-            {"objects": ["toy", "teddy bear"], "description": "Oh, what a nice toy!"},
+            {"objects": ["toy"], "description": "Oh, what a nice toy!"},
             {"objects": ["iphone", "phone"], "description": "I see your phone there!"},
         ]
 
@@ -92,19 +92,40 @@ class DemoGeminiService:
         if session_id not in self.sessions:
             self.sessions[session_id] = {
                 "interaction_count": 0,
-                "vision_index": 0
+                "vision_index": 0,
+                "vision_call_count": 0  # Track vision API calls separately
             }
 
         session = self.sessions[session_id]
 
-        # Rotate through objects slowly (every 2 frames)
-        vision_data = self.vision_objects[session["vision_index"]]
+        # Ensure vision_call_count exists (in case session was created by audio first)
+        if "vision_call_count" not in session:
+            session["vision_call_count"] = 0
 
-        # Increment vision index every 2 calls (slower rotation)
-        if session["interaction_count"] % 2 == 0:
-            session["vision_index"] = (session["vision_index"] + 1) % len(self.vision_objects)
+        session["vision_call_count"] += 1
 
-        logger.info(f"👁️ Vision detected: {vision_data['objects']}")
+        call_count = session["vision_call_count"]
+
+        # Realistic detection timeline (assuming 3s per frame):
+        # Call 1 (0-3s): Nothing detected - camera just starting
+        # Calls 2-3 (3-9s): Pen detected
+        # Calls 4-5 (9-15s): Toy detected
+        # Calls 6-7 (15-21s): iPhone detected
+        # Then repeat cycle
+
+        if call_count <= 1:
+            # Initial phase - no detection yet
+            logger.info(f"👁️ Vision call {call_count}: Warming up, no objects detected")
+            return {
+                "objects_detected": [],
+                "description": ""
+            }
+
+        # Calculate which object to show (changes every 2 frames after warmup)
+        object_index = ((call_count - 2) // 2) % len(self.vision_objects)
+        vision_data = self.vision_objects[object_index]
+
+        logger.info(f"👁️ Vision call {call_count}: Detected {vision_data['objects']}")
 
         return {
             "objects_detected": vision_data["objects"],
@@ -125,8 +146,10 @@ class DemoGeminiService:
         logger.info(f"⏸️ Demo: Generation interrupted for {session_id}")
 
     async def generate_illustration(self, description: str, session_id: str):
-        """Return progressive illustration URLs"""
-        await asyncio.sleep(1.2)  # Realistic generation time
+        """Return progressive illustration URLs with realistic delay"""
+        # Simulate realistic image generation time (increased for better demo effect)
+        # This creates a nice "pending" period where frontend shows "Creating magic..."
+        await asyncio.sleep(3.5)  # 3.5 seconds - realistic AI image generation time
 
         # Get current stage
         if session_id not in self.sessions:
@@ -137,5 +160,5 @@ class DemoGeminiService:
         stage_index = (session["interaction_count"] - 1) % len(self.story_stages)
         image_url = self.story_stages[stage_index]["image"]
 
-        logger.info(f"🎨 Returning illustration: {image_url}")
+        logger.info(f"🎨 Illustration ready after generation: {image_url}")
         return image_url

@@ -110,7 +110,9 @@ export default function Home() {
     // Handle vision detection
     on('vision_detection', (message: WSMessage) => {
       const data = message.data;
-      if (data?.objects_detected) {
+      // Always update detected objects, even if empty array
+      // This clears old tags when no objects are detected
+      if (data?.objects_detected !== undefined) {
         setDetectedObjects(data.objects_detected);
       }
     });

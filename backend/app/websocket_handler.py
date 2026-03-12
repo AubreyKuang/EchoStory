@@ -173,13 +173,18 @@ class WebSocketManager:
                 session_id=session_id
             )
 
-            # If object detected, proactively mention it
-            if analysis.get("objects_detected") and len(analysis.get("objects_detected", [])) > 0:
-                logger.info(f"👀 Objects detected: {analysis['objects_detected']}")
-                await websocket.send_json({
-                    "type": "vision_detection",
-                    "data": analysis
-                })
+            # Always send vision detection result (even if empty)
+            # This ensures frontend clears old tags when no objects are detected
+            objects = analysis.get("objects_detected", [])
+            if len(objects) > 0:
+                logger.info(f"👀 Objects detected: {objects}")
+            else:
+                logger.debug(f"👀 No objects detected (warmup or clear frame)")
+
+            await websocket.send_json({
+                "type": "vision_detection",
+                "data": analysis
+            })
 
         except Exception as e:
             logger.error(f"❌ Error handling video frame: {str(e)}", exc_info=True)
