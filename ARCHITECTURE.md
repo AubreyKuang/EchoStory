@@ -45,15 +45,29 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 #### Live Canvas Component
 - **Purpose**: Real-time visual storybook display
 - **Features**:
-  - Interleaved illustration + text rendering
+  - Interleaved illustration + text rendering (images 80% width, max-h-[50vh])
   - Emotion-based background color changes
   - Smooth animations (fade-in/slide-up)
-  - Progress indicators
+  - Progress indicators at bottom
+  - Content positioned from top (pt-20 pb-24, justify-start)
+  - "Creating magic..." loading indicator in top-right
+
+#### Logo & Session Components
+- **Logo**: Top-left corner with ✨ icon and "EchoStory" branding
+- **Session Info**: Top-right corner showing current session ID
+- **Layout**: Fixed positioning, z-index 50, minimal interference with content
 
 #### Voice/Vision Controls
-- **Audio Recording**: WebRTC MediaRecorder API
-- **Video Capture**: Live camera feed with frame extraction
+- **Audio Recording**:
+  - WebRTC MediaRecorder API
+  - Records continuously, sends complete audio only when stopped
+  - No intermediate chunk streaming (prevents UI flashing)
+- **Video Capture**:
+  - Live camera feed with frame extraction every 3 seconds
+  - Uses `streamRef` to store stream before video element renders
+  - Connects stream in `useEffect` after element is available
 - **Interruption**: Real-time interrupt button
+- **Speech Synthesis**: Web Speech API with 200ms delay for text sync
 
 #### WebSocket Service
 - Persistent connection management
@@ -103,22 +117,86 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 - **NoSQL Database**: Session and segment storage
 - **Real-time Updates**: Live synchronization
 
+## Demo Mode
+
+### Purpose
+Demo Mode allows testing and development without requiring:
+- Real Gemini API access (important for region-restricted areas)
+- Google Cloud credentials
+- Cloud Storage/Firestore setup
+
+### Activation
+Set `DEMO_MODE=true` in `.env` or environment variables.
+
+### Demo Services
+
+#### DemoGeminiService (`demo_service.py`)
+- **Simulates Gemini responses**: Returns predefined story text
+- **Mock function calls**: Always triggers illustration generation
+- **Timing**: 500ms delay to simulate API latency
+- **Behavior**: Only responds when `is_final=true` to prevent UI flashing
+
+#### DemoStorageService
+- **Returns input URL directly**: No actual upload to Cloud Storage
+- **Local image support**: Works with `http://localhost:3000/test.png`
+
+#### DemoFirestoreService
+- **Mock session management**: Returns success without database writes
+- **No persistence**: Sessions are not saved
+
+### Configuration Check
+```python
+# backend/app/main.py
+if settings.DEMO_MODE:
+    from app.services.demo_service import DemoGeminiService as GeminiService
+else:
+    from app.services.gemini_service import GeminiService
+```
+
+### Required Environment Variables
+
+#### Production Mode
+```bash
+DEMO_MODE=false
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
+GEMINI_API_KEY=your-gemini-api-key
+STORAGE_BUCKET_NAME=your-bucket-name
+```
+
+#### Demo Mode
+```bash
+DEMO_MODE=true
+# No other credentials required!
+```
+
 ## Key Innovations
 
 ### 1. Interleaved Output
-- **Problem**: Traditional AI outputs are turn-based
-- **Solution**: Stream text, audio, and images simultaneously
-- **Implementation**: Function calling triggers concurrent image generation while voice continues
+- **Problem**: Traditional AI outputs are turn-based (wait for everything before displaying)
+- **Solution**: Display text and play voice immediately, then add image when ready
+- **Implementation**:
+  1. Gemini responds with text + function call for illustration
+  2. Frontend creates segment with text immediately (no image yet)
+  3. Text animates in (300ms) and voice starts (200ms delay)
+  4. Backend generates image with Imagen 3 in parallel
+  5. Image URL sent via WebSocket when ready
+  6. Frontend updates existing segment with image (fade-in animation 600ms)
+- **Result**: User sees text/hears voice within ~200ms, image appears 2-5s later
 
 ### 2. Live Vision Integration
 - **Problem**: Static text-only interaction
 - **Solution**: Real-time object detection from camera
-- **Implementation**: Frame extraction → Gemini Vision → Proactive story integration
+- **Implementation**:
+  - Store MediaStream in `streamRef` before video element renders
+  - Set `isCapturing=true` to trigger video element rendering
+  - Connect stream to video element in `useEffect`
+  - Extract frames every 3 seconds → Gemini Vision → Proactive story integration
 
 ### 3. Interruption Support
 - **Problem**: Children need to change direction mid-story
 - **Solution**: Real-time interrupt handling
-- **Implementation**: WebSocket interrupt message → Stop generation → Re-contextualize
+- **Implementation**: WebSocket interrupt message → Stop generation → Cancel speech synthesis → Re-contextualize
 
 ### 4. Low-Demand Design
 - **Problem**: Traditional tools pressure children to perform
@@ -130,17 +208,23 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 ### Story Creation Flow
 
 ```
-1. User speaks → Audio chunk → WebSocket
-2. Backend → Gemini Live API (streaming)
-3. Gemini decides → Call generate_illustration()
-4. Parallel execution:
-   - Continue voice narration stream
+1. User speaks → Record audio → Stop recording
+2. Send complete audio (is_final=true) → WebSocket → Backend
+3. Backend → Gemini Live API processes complete audio
+4. Gemini responds with text + decides to call generate_illustration()
+5. Frontend immediately:
+   - Creates story segment with text
+   - Displays text with animation
+   - Starts TTS playback (200ms delay for sync)
+6. Backend parallel execution:
    - Generate image with Imagen 3
-   - Upload to Cloud Storage
-5. Send image URL → Frontend (WebSocket)
-6. Frontend renders image + text simultaneously
-7. Save segment to Firestore
+   - Upload to Cloud Storage (or return URL in Demo Mode)
+7. Send image URL → Frontend (WebSocket)
+8. Frontend updates existing segment with image (fade-in animation)
+9. Save segment to Firestore (or mock in Demo Mode)
 ```
+
+**Note**: Audio is sent only when recording stops (not streaming chunks) to prevent UI flashing.
 
 ### Vision Detection Flow
 
@@ -173,12 +257,20 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 ## Performance Optimization
 
 ### Latency Targets
-- Voice response: <500ms
+- Voice response: <500ms (in Demo Mode)
 - Image generation: 2-5s
 - Frame analysis: <1s
 
+### UI Optimization
+- **Audio Processing**: Send only final audio to prevent frequent UI updates
+- **Animation Timing**:
+  - Text animation: 300ms
+  - Voice playback delay: 200ms (synced with text)
+  - Image fade-in: 600ms
+- **React Strict Mode**: Disabled to prevent WebSocket double connections
+
 ### Caching
-- WebSocket connection pooling
+- WebSocket connection pooling with `connectingRef` to prevent duplicates
 - Gemini session context caching
 - Frontend asset caching
 
@@ -190,9 +282,21 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 ## Development Workflow
 
 ### Local Development
-1. Run backend: `uvicorn app.main:app --reload`
-2. Run frontend: `npm run dev`
-3. Or use Docker Compose: `docker-compose up`
+
+#### With Demo Mode (No API keys required)
+1. Set `DEMO_MODE=true` in `backend/.env`
+2. Run backend: `cd backend && uvicorn app.main:app --reload`
+3. Run frontend: `cd frontend && npm run dev`
+4. Test with simulated AI responses
+
+#### With Real APIs
+1. Configure GCP credentials and API keys in `backend/.env`
+2. Set `DEMO_MODE=false`
+3. Run backend: `cd backend && uvicorn app.main:app --reload`
+4. Run frontend: `cd frontend && npm run dev`
+
+#### Docker Compose
+- `docker-compose up` (uses environment variables from `.env`)
 
 ### Deployment
 1. Configure GCP project
@@ -204,14 +308,17 @@ EchoStory is a multimodal AI Live Agent that helps children with ASD tell storie
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| Frontend | Next.js 14, React, TypeScript | UI framework |
+| Frontend | Next.js 14, React, TypeScript | UI framework (strict mode disabled) |
 | Styling | Tailwind CSS, Framer Motion | Sensory-friendly design + animations |
 | Backend | FastAPI, Python 3.11 | Async WebSocket server |
 | AI Models | Gemini 2.0 Flash, Imagen 3 | Voice, vision, image generation |
+| Demo Mode | Demo Services (Python) | Simulated AI for testing without APIs |
 | Database | Firestore | Session storage |
 | Storage | Cloud Storage | Asset storage |
 | Hosting | Cloud Run | Containerized deployment |
 | Build | Docker, Cloud Build | CI/CD pipeline |
+
+**Note**: React strict mode is disabled (`reactStrictMode: false`) to prevent WebSocket duplicate connections.
 
 ## Future Enhancements
 

@@ -278,3 +278,346 @@ EchoStory pushes beyond traditional chatbot interfaces by combining:
 
 The result is a **living storytelling agent** that transforms everyday communication into an engaging creative experience.
 
+------
+
+# 9. Testing Guide
+
+EchoStory supports two modes for testing and development: **Demo Mode** (no API keys required) and **Production Mode** (with real Gemini API).
+
+## Demo Mode (Recommended for Testing)
+
+### ✅ Advantages
+
+- **No API Keys Required** - Works completely offline without any Google Cloud credentials
+- **Perfect for Restricted Regions** - Ideal if Gemini API is not available in your region
+- **Zero Cost** - No API usage fees
+- **Predictable Behavior** - Consistent responses for presentations and demos
+- **Fast Iteration** - Instant responses without waiting for API calls
+- **Privacy-Friendly** - No data sent to external services
+
+### 🚀 Quick Start (Demo Mode)
+
+#### 1. Prerequisites
+```bash
+# Install Node.js 18+ and Python 3.11+
+node --version  # Should be 18.x or higher
+python --version  # Should be 3.11 or higher
+```
+
+#### 2. Prepare Demo Images
+Place three progressive story images in `/frontend/public/`:
+- `test.png` - Sunny sky scene (Stage 1)
+- `test2.png` - Green grassland scene (Stage 2)
+- `test3.png` - Happy puppy scene (Stage 3)
+
+#### 3. Backend Setup
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cat > .env << EOF
+DEMO_MODE=true
+APP_NAME=EchoStory
+STORAGE_BUCKET_NAME=demo-bucket
+EOF
+
+# Start backend
+uvicorn app.main:app --reload
+```
+
+You should see:
+```
+🎭 Running in DEMO MODE - using simulated responses
+```
+
+#### 4. Frontend Setup
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+#### 5. Access Application
+Open browser and navigate to:
+```
+http://localhost:3000
+```
+
+### 🎬 Demo Features
+
+**Progressive Story Generation:**
+1. **First interaction** → Sunny sky image + "Oh, what a beautiful sunny day!"
+2. **Second interaction** → Grassland image + "The grass looks so soft and green!"
+3. **Third interaction** → Puppy image + "Wow! A friendly puppy!"
+
+**Vision Detection:**
+- Camera detects objects in sequence: pen → toy → iPhone
+- Objects rotate slowly for realistic demo experience
+
+**Realistic Timing:**
+- Audio processing: 800ms delay
+- Image generation: 1.2s delay
+- Vision analysis: 600ms delay
+
+---
+
+## Production Mode (Real Gemini API)
+
+### 📋 Prerequisites
+
+1. **Google Cloud Project** with billing enabled
+2. **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/)
+3. **Vertex AI enabled** in your GCP project
+4. **Service Account** with permissions:
+   - Vertex AI User
+   - Storage Admin
+   - Firestore User
+
+### 🔑 API Key Setup
+
+#### Option A: Using Gemini API (Recommended for Testing)
+
+```bash
+# Get API key from: https://aistudio.google.com/app/apikey
+# Note: Gemini API availability varies by region
+
+cd backend
+
+cat > .env << EOF
+DEMO_MODE=false
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-2.0-flash-exp
+GOOGLE_CLOUD_PROJECT=your-project-id
+VERTEX_AI_LOCATION=us-central1
+IMAGEN_MODEL=imagegeneration@006
+STORAGE_BUCKET_NAME=your-bucket-name
+FIRESTORE_COLLECTION=story_sessions
+CORS_ORIGINS=["http://localhost:3000"]
+EOF
+```
+
+#### Option B: Using Vertex AI (Full Production)
+
+```bash
+# Download service account key from Google Cloud Console
+# Place at: backend/credentials.json
+
+cat > .env << EOF
+DEMO_MODE=false
+GOOGLE_APPLICATION_CREDENTIALS=./credentials.json
+GOOGLE_CLOUD_PROJECT=your-project-id
+GEMINI_MODEL=gemini-2.0-flash-exp
+VERTEX_AI_LOCATION=us-central1
+IMAGEN_MODEL=imagegeneration@006
+STORAGE_BUCKET_NAME=your-bucket-name
+FIRESTORE_COLLECTION=story_sessions
+EOF
+```
+
+### 🏗️ Google Cloud Setup
+
+```bash
+# Install gcloud CLI
+# https://cloud.google.com/sdk/docs/install
+
+# Login and set project
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# Enable required APIs
+gcloud services enable \
+  aiplatform.googleapis.com \
+  storage.googleapis.com \
+  firestore.googleapis.com \
+  run.googleapis.com
+
+# Create storage bucket
+gsutil mb -l us-central1 gs://your-bucket-name
+gsutil iam ch allUsers:objectViewer gs://your-bucket-name
+
+# Initialize Firestore
+gcloud firestore databases create --region=us-central1
+```
+
+### 🚀 Start Production Mode
+
+```bash
+# Backend
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload
+
+# Frontend
+cd frontend
+npm run dev
+```
+
+You should see:
+```
+Running with real Gemini API
+```
+
+---
+
+## 🌍 Region Availability
+
+### Gemini API Regions
+Gemini API is currently available in:
+- United States
+- European Union countries
+- United Kingdom
+- Canada
+- Australia
+- Japan
+- South Korea
+- Singapore
+
+**If Gemini API is NOT available in your region:**
+- ✅ Use **Demo Mode** for full functionality testing
+- ✅ Demo Mode works identically to production for presentations
+- ✅ Consider VPN for API testing (if allowed by terms of service)
+
+---
+
+## 🧪 Testing Checklist
+
+### Demo Mode Testing
+- [ ] Backend shows `🎭 Running in DEMO MODE`
+- [ ] First recording returns sunny sky image (test.png)
+- [ ] Second recording returns grassland image (test2.png)
+- [ ] Third recording returns puppy image (test3.png)
+- [ ] Camera detects: pen, toy, iPhone in sequence
+- [ ] Interruption button stops generation immediately
+- [ ] Voice synthesis works (browser TTS)
+- [ ] No console errors
+
+### Production Mode Testing
+- [ ] Backend shows `Running with real Gemini API`
+- [ ] Gemini processes voice input and responds
+- [ ] Vision API detects real objects from camera
+- [ ] Imagen generates illustrations (2-5 seconds)
+- [ ] Images saved to Cloud Storage
+- [ ] Sessions saved to Firestore
+- [ ] No API errors in logs
+
+---
+
+## 🔍 Troubleshooting
+
+### Demo Mode Issues
+
+**Problem**: Images not loading
+```bash
+# Ensure images are in correct location
+ls frontend/public/test*.png
+# Should show: test.png, test2.png, test3.png
+```
+
+**Problem**: Backend not starting
+```bash
+# Check Python version
+python --version  # Must be 3.11+
+
+# Reinstall dependencies
+cd backend
+pip install --upgrade -r requirements.txt
+```
+
+### Production Mode Issues
+
+**Problem**: "API key not valid"
+```bash
+# Verify API key at: https://aistudio.google.com/app/apikey
+# Ensure no extra spaces in .env file
+cat backend/.env | grep GEMINI_API_KEY
+```
+
+**Problem**: "Permission denied" for Cloud Storage
+```bash
+# Check bucket permissions
+gsutil iam get gs://your-bucket-name
+
+# Add public access
+gsutil iam ch allUsers:objectViewer gs://your-bucket-name
+```
+
+**Problem**: Firestore errors
+```bash
+# Verify Firestore is initialized
+gcloud firestore databases list
+
+# Check service account has Firestore User role
+```
+
+---
+
+## 📊 Comparison: Demo vs Production
+
+| Feature | Demo Mode | Production Mode |
+|---------|-----------|-----------------|
+| **API Keys** | ❌ Not required | ✅ Required |
+| **Cost** | 🆓 Free | 💰 Pay per use |
+| **Response Quality** | 📝 Pre-written | 🤖 AI-generated |
+| **Image Generation** | 🖼️ Static images | 🎨 Real-time Imagen |
+| **Vision Detection** | 👁️ Simulated | 👁️ Real Gemini Vision |
+| **Latency** | ⚡ <1 second | ⏱️ 2-5 seconds |
+| **Region Restrictions** | 🌍 Works everywhere | ⚠️ Region-dependent |
+| **Best For** | Testing, demos, presentations | Production, real users |
+
+---
+
+## 🎥 Recording Demo Video
+
+For hackathon submissions or presentations:
+
+1. **Use Demo Mode** for predictable, polished demos
+2. Follow the script in `demo.md`
+3. Prepare demo objects: pen, toy, iPhone
+4. Expected runtime: 4-5 minutes
+5. Show terminal logs alongside UI for technical credibility
+
+See `demo.md` for detailed scene-by-scene script.
+
+---
+
+## 🚢 Deployment
+
+### Deploy to Google Cloud Run
+
+```bash
+cd backend
+gcloud run deploy echostory-backend \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+### Deploy Frontend to Vercel
+
+```bash
+cd frontend
+npm install -g vercel
+vercel --prod
+```
+
+---
+
+## 📚 Additional Resources
+
+- **Architecture Details**: See `Architecture.md`
+- **Demo Script**: See `demo.md`
+- **Gemini API Docs**: https://ai.google.dev/docs
+- **Vertex AI Docs**: https://cloud.google.com/vertex-ai/docs
+

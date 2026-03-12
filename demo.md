@@ -1,58 +1,251 @@
-简单直接地回答：**不仅仅是生成视频，它是“实时交互式多模态生成”。**
+# EchoStory Demo Script
 
-在评委眼里，如果你的项目只是“输入一段话 -> 等待 -> 出来一个视频文件”，那这只是一个普通的 AI 工具，很难拿奖。
+## Overview
+This demo showcases EchoStory's real-time multimodal AI storytelling capabilities for children with ASD. The demo uses progressive story generation with three stages: **Sunshine** → **Grassland** → **Puppy**.
 
-要拿大奖（尤其是 **Creative Storyteller** 奖项），你的项目核心必须是：**实时（Live）** + **交错（Interleaved）**。
+## Demo Mode Setup
 
-以下是根据黑客松规则，你必须在演示视频和技术中展示的 **4个核心要素**：
+### Prerequisites
+1. Three progressive images placed in `/frontend/public/`:
+   - `test.png` - Bright sunny sky scene
+   - `test2.png` - Green grassland/meadow scene
+   - `test3.png` - Happy puppy on grass scene
 
-### 1. 它是“边说边出”的（Interleaved Output）
+2. Backend configuration:
+   ```bash
+   # backend/.env
+   DEMO_MODE=true
+   ```
 
-你不需要生成一个完整的 4 分钟长视频。
+3. Start services:
+   ```bash
+   # Terminal 1 - Backend
+   cd backend
+   uvicorn app.main:app --reload
 
-- **评委想看的是：** 孩子说一句“有一只小狗”，屏幕上立刻弹出一张小狗的**图片**或一段 3 秒的 **GIF/短视频**，同时 AI 正在用**语音**描述它。
-- **技术点：** 这叫“交错输出”。文字、音频、图片/短视频是流式（Streaming）出现的，而不是最后才打包成一个文件。
+   # Terminal 2 - Frontend
+   cd frontend
+   npm run dev
+   ```
 
-### 2. 语音输入是“实时且可打断”的 (Live API)
+## Demo Script for Video Recording
 
-这是本次黑客松最硬核的指标。
+### Scene 1: Introduction (0:00 - 0:45)
+**Visual**: Show the EchoStory interface with logo and clean UI.
 
-- **你需要展示：** 你正在说话，AI 正在生成内容，你突然**打断**它说：“不对，这只狗应该是蓝色的！”。
-- **关键点：** AI 必须立刻停下来，意识到错误，并实时更新它正在生成的视觉画面。如果你的后端只是跑一个简单的 Python 脚本等结果，就体现不出 Gemini Live API 的强大。
+**Voiceover**:
+> "Meet EchoStory - an AI companion that helps children with autism tell stories about their day through voice, vision, and interactive illustrations."
 
-### 3. 关于“视频”生成的度（Veo vs. Image）
+---
 
-- **建议：** 考虑到 2026 年的 API 响应速度和黑客松的 6 天时限，全量生成长视频可能太慢。
-- **高分策略：** 采用 **“静态图 + 局部动态”**。
-  - 使用 Gemini 生成**实时绘本插画**。
-  - 在关键剧情转折点，调用 Google 的 **Veo** 模型生成一段 3-5 秒的高质量短视频。
-  - 这种“动静结合”既能体现多模态能力，又不会因为视频渲染太慢导致演示卡顿。
+### Scene 2: First Interaction - Sunshine (0:45 - 1:30)
+**Action**:
+1. Click the microphone button (red circle at bottom)
+2. **Say in English**: "I went outside today. It was sunny."
+3. Release the button
 
-### 4. 必须展示的 Google Cloud 后端证明
+**Expected Response**:
+- ✨ "Creating magic..." appears briefly
+- 🎨 Image 1 (sunny sky) fades in
+- 📝 Text appears: "Oh, what a beautiful sunny day! The sun is shining so bright. Tell me, what do you see?"
+- 🔊 Voice reads the text (using browser TTS)
 
-规则中明确要求：**“Proof of Google Cloud Deployment”**。你需要在演示视频里插入 10-20 秒的片段展示：
+**Highlight**:
+- Point out the **interleaved output** - text appears immediately, image follows
+- Show the smooth fade-in animation
+- Voice and text are synchronized (200ms delay)
 
-1. **Google Cloud Console 界面：** 展示你的后端服务（比如 Cloud Run 或 Vertex AI Endpoints）正在运行。
-2. **日志（Logs）：** 演示当你在前端说话时，后端 Console 正在实时跳动处理请求。
+---
 
-------
+### Scene 3: Second Interaction - Grassland (1:30 - 2:15)
+**Action**:
+1. Click microphone again
+2. **Say in English**: "There was green grass everywhere."
+3. Release button
 
-### 💡 针对你的项目，建议的演示视频逻辑：
+**Expected Response**:
+- 🎨 Image 2 (grassland) replaces the previous scene
+- 📝 Text: "I love it! The grass looks so soft and green. What a wonderful place to play! What did you do there?"
+- 🔊 Voice narration continues
 
-为了拿奖，你的 4 分钟视频应该这样拍：
+**Highlight**:
+- Show smooth scene transition
+- Point out progress indicators at bottom (3 dots, second one highlighted)
 
-| **时间段**    | **展示内容**                                                 | **目的 (评分点)**                       |
-| ------------- | ------------------------------------------------------------ | --------------------------------------- |
-| **0:00-0:45** | **场景引入：** 一个孩子（或你模拟）对着平板，显得很沮丧，不知道怎么描述今天的事。 | **Social Impact / Problem Statement**   |
-| **0:45-1:30** | **核心演示：** 你开口说话，AI 实时回应，并随着你的话语在屏幕上**实时弹出图片和文字**。 | **Innovation (Multimodal UX)**          |
-| **1:30-2:15** | **互动高潮：** 你展示 **“Vision” 功能**。你拿出一个积木，AI 说：“我看到你的积木了，让我们把它加进故事里！” | **Live Vision / See, Hear, Speak**      |
-| **2:15-3:00** | **打断测试：** AI 正在描述场景，你突然改变主意，看 AI 如何丝滑切换内容。 | **Technical Implementation (Live API)** |
-| **3:00-3:30** | **技术背书：** 快速切换到电脑屏幕，展示 **Google Cloud 控制台**和架构图。 | **GCP Requirements / Architecture**     |
-| **3:30-4:00** | **情感升华：** 展示生成的“每日绘本总结”，孩子和父母一起阅读。 | **Mission & Vision**                    |
+---
 
-------
+### Scene 4: Third Interaction - Puppy (2:15 - 3:00)
+**Action**:
+1. Click microphone again
+2. **Say in English**: "I saw a friendly puppy."
+3. Release button
 
-### 总结
+**Expected Response**:
+- 🎨 Image 3 (puppy on grass) appears
+- 📝 Text: "Wow! A friendly puppy! Look at that happy face! Is the puppy playing with you?"
+- 🔊 Voice narration
 
-你不是在做一个“视频剪辑器”，你是在做一个 **“会实时画画、会看世界、能随时交流的陪聊特教老师”**。
+**Highlight**:
+- Emphasize the **progressive story building**
+- Show how AI builds on previous context
 
+---
+
+### Scene 5: Vision Detection Demo (3:00 - 3:45)
+**Action**:
+1. Click the camera button (enable vision)
+2. Hold up objects in front of camera in sequence:
+   - 📝 **A pen** → AI detects "pen"
+   - 🧸 **A toy** → AI detects "toy, teddy bear"
+   - 📱 **An iPhone** → AI detects "iphone, phone"
+
+**Expected Response**:
+- Camera overlay appears in bottom-right
+- Detected objects show in the overlay
+- Objects rotate slowly (not too fast)
+
+**Voiceover**:
+> "EchoStory uses Live Vision to detect real-world objects and naturally incorporate them into the story."
+
+---
+
+### Scene 6: Interruption Feature (3:45 - 4:00)
+**Action**:
+1. Start recording
+2. While AI is speaking, click the **Interrupt** button (⏸️ icon)
+
+**Expected Response**:
+- AI speech stops immediately
+- "Creating magic..." indicator disappears
+- Ready for new input
+
+**Highlight**:
+> "Children can interrupt at any time - crucial for low-demand interaction."
+
+---
+
+### Scene 7: Technical Showcase (4:00 - 4:30)
+**Visual Split Screen**:
+- Left: EchoStory interface
+- Right: Terminal showing backend logs
+
+**Show in Terminal**:
+```
+📖 Demo Story Stage 1: sunshine
+🎨 Returning illustration: http://localhost:3000/test.png
+👁️ Vision detected: ['pen']
+📖 Demo Story Stage 2: grassland
+🎨 Returning illustration: http://localhost:3000/test2.png
+```
+
+**Voiceover**:
+> "Built on Google Cloud with Gemini 2.0 Flash Live API for real-time multimodal processing."
+
+---
+
+### Scene 8: Architecture & Impact (4:30 - 5:00)
+**Visual**: Show Architecture.md diagram
+
+**Voiceover**:
+> "EchoStory combines voice, vision, and visual generation in real-time. No more pressure to perform - just natural storytelling that empowers autistic children to share their world."
+
+---
+
+## Key Technical Features to Highlight
+
+### 1. Interleaved Output ✨
+- Text appears **immediately** (300ms animation)
+- Voice starts **200ms later** (synchronized)
+- Image fades in **1.2 seconds later** (realistic generation time)
+- Not "wait for everything then show" - true streaming UX
+
+### 2. Live Vision 👁️
+- Real-time object detection via camera
+- Objects: pen → toy → iPhone (rotate slowly)
+- Realistic detection speed (600ms per frame)
+
+### 3. Interruption Handling ⏸️
+- Instant stop when user clicks interrupt
+- Speech synthesis cancels immediately
+- Ready for new direction
+
+### 4. Progressive Story Building 📖
+- Three-stage narrative: sunshine → grassland → puppy
+- Each stage builds on previous context
+- Natural conversation flow
+
+### 5. Sensory-Friendly Design 🎨
+- Gentle animations
+- Emotion-based background gradients
+- Clear visual hierarchy
+- No overwhelming elements
+
+---
+
+## Testing Checklist
+
+Before recording:
+- [ ] All three images (test.png, test2.png, test3.png) are in place
+- [ ] Backend shows `🎭 Running in DEMO MODE`
+- [ ] Frontend loads without errors
+- [ ] Microphone permission granted
+- [ ] Camera permission granted (for vision demo)
+- [ ] Audio output works (TTS voice)
+- [ ] Session ID appears in top-right
+
+During demo:
+- [ ] First interaction shows test.png (sunshine)
+- [ ] Second interaction shows test2.png (grassland)
+- [ ] Third interaction shows test3.png (puppy)
+- [ ] Vision detects pen, toy, iPhone in sequence
+- [ ] Interrupt button stops generation
+- [ ] No UI flashing or errors
+- [ ] Animations are smooth
+
+---
+
+## Suggested Recording Setup
+
+### Camera Setup
+- **Split screen**: 70% app interface, 30% you speaking
+- **Or**: Full screen app with voice-over narration
+- **Quality**: 1080p minimum
+
+### Audio Setup
+- Clear microphone for your voice
+- Capture system audio for AI responses
+- Background music (optional, keep subtle)
+
+### Timing
+- 4-5 minutes total
+- 30-45 seconds per scene
+- Leave 2-3 seconds between actions for visibility
+
+---
+
+## Demo Advantages
+
+✅ **No API keys required** - Works completely offline
+✅ **Predictable behavior** - Same sequence every time
+✅ **Fast iteration** - No waiting for real API responses
+✅ **Cost-free** - Perfect for presentations and testing
+✅ **Realistic timing** - Simulates actual API latencies
+
+---
+
+## Post-Demo: Switch to Production
+
+To enable real Gemini API:
+```bash
+# backend/.env
+DEMO_MODE=false
+GEMINI_API_KEY=your-actual-key
+GOOGLE_CLOUD_PROJECT=your-project
+STORAGE_BUCKET_NAME=your-bucket
+```
+
+Real mode adds:
+- Actual Gemini 2.0 Flash responses
+- Imagen 3 illustration generation
+- Cloud Storage for assets
+- Firestore session persistence
